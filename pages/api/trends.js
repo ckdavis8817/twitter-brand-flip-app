@@ -5,6 +5,9 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('=== TRENDS API CALLED ===');
+    console.log('NEWS_API_KEY exists:', !!process.env.NEWS_API_KEY);
+    
     // Fetch Google Trends data
     const trendsData = await fetchGoogleTrends();
     
@@ -34,24 +37,52 @@ async function fetchGoogleTrends() {
 }
 
 async function fetchRelatedNews(trends) {
+  console.log('=== FETCHING NEWS FOR TRENDS ===');
+  console.log('NEWS_API_KEY exists:', !!process.env.NEWS_API_KEY);
+  console.log('NEWS_API_KEY length:', process.env.NEWS_API_KEY?.length || 0);
+  
   const newsArticles = {};
   
   for (const trend of trends) {
     try {
+      console.log(`Calling News API for: "${trend.topic}"`);
+      
+      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(trend.topic)}&sortBy=publishedAt&pageSize=5&apiKey=${process.env.NEWS_API_KEY}`;
+      console.log('News API URL:', url.replace(process.env.NEWS_API_KEY, 'API_KEY_HIDDEN'));
+      
       // Call NewsAPI for each trend
-      const response = await fetch(
-        `https://newsapi.org/v2/everything?q=${encodeURIComponent(trend.topic)}&sortBy=publishedAt&pageSize=5&apiKey=${process.env.NEWS_API_KEY}`
-      );
+      const response = await fetch(url);
+      
+      console.log(`News API response status for "${trend.topic}":`, response.status);
       
       if (response.ok) {
         const data = await response.json();
-        newsArticles[trend.topic] = data.articles?.slice(0, 3) || [];
+        console.log(`News API returned ${data.articles?.length || 0} articles for "${trend.topic}"`);
+        
+        if (data.articles && data.articles.length > 0) {
+          newsArticles[trend.topic] = data.articles.slice(0, 3);
+          console.log(`First article title: "${data.articles[0]?.title}"`);
+        } else {
+          console.log(`No articles found for "${trend.topic}"`);
+          newsArticles[trend.topic] = [];
+        }
+      } else {
+        const errorText = await response.text();
+        console.log(`News API error for "${trend.topic}":`, response.status, response.statusText);
+        console.log('Error response:', errorText);
+        newsArticles[trend.topic] = [];
       }
     } catch (error) {
       console.error(`Error fetching news for ${trend.topic}:`, error);
       newsArticles[trend.topic] = [];
     }
+    
+    // Add small delay between API calls to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
+  
+  console.log('=== NEWS FETCH COMPLETE ===');
+  console.log('Topics with articles:', Object.keys(newsArticles).filter(topic => newsArticles[topic].length > 0));
   
   return newsArticles;
 }
