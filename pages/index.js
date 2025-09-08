@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [approvalQueue, setApprovalQueue] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingTrends, setIsLoadingTrends] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
   const [activeTab, setActiveTab] = useState('trends');
   const [selectedTrend, setSelectedTrend] = useState(null);
 
@@ -68,27 +69,58 @@ export default function Dashboard() {
     }
   };
 
-  const approvePost = async (id) => {
+  const approvePost = async (id, immediate = false) => {
+    if (immediate) {
+      setIsPosting(true);
+    }
+    
     try {
+      // Find the post content to send with the request
+      const post = approvalQueue.find(p => p.id === id);
+      
       const response = await fetch('/api/approve', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ 
+          id, 
+          content: post?.content,
+          immediate: immediate 
+        }),
       });
       
       if (response.ok) {
+        const result = await response.json();
+        console.log('Approval result:', result);
+        
+        // Show success message for immediate posting
+        if (immediate && result.posted) {
+          alert(`Successfully posted to Twitter! Thread length: ${result.threadLength} tweets. First tweet ID: ${result.tweetId}`);
+        }
+        
         setApprovalQueue(prev => 
           prev.map(post => 
             post.id === id 
-              ? { ...post, status: 'approved', scheduled: new Date(Date.now() + Math.random() * 8 * 60 * 60 * 1000) }
+              ? { 
+                  ...post, 
+                  status: 'approved', 
+                  scheduled: immediate ? new Date() : new Date(Date.now() + Math.random() * 8 * 60 * 60 * 1000),
+                  posted: immediate ? true : false,
+                  tweetId: result.tweetId || null
+                }
               : post
           )
         );
+      } else {
+        const errorData = await response.json();
+        alert(`Error: ${errorData.error || 'Failed to process request'}`);
       }
     } catch (error) {
       console.error('Error approving post:', error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setIsPosting(false);
     }
   };
 
@@ -297,10 +329,18 @@ export default function Dashboard() {
                           Reject
                         </button>
                         <button
-                          onClick={() => approvePost(post.id)}
-                          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all"
+                          onClick={() => approvePost(post.id, false)}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all"
                         >
-                          Approve & Schedule
+                          Schedule Later
+                        </button>
+                        <button
+                          onClick={() => approvePost(post.id, true)}
+                          disabled={isPosting}
+                          className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all disabled:opacity-50"
+                        >
+                          <Twitter className="w-4 h-4" />
+                          <span>{isPosting ? 'Posting...' : 'Post Now'}</span>
                         </button>
                       </div>
                     </div>
@@ -350,19 +390,26 @@ export default function Dashboard() {
                     <div>
                       <h3 className="text-lg font-semibold text-white mb-2">{post.trend}</h3>
                       <p className="text-purple-200 text-sm">
-                        Scheduled for: {post.scheduled ? new Date(post.scheduled).toLocaleString() : 'Next available slot'}
+                        {post.posted ? 'Posted: ' : 'Scheduled for: '} 
+                        {post.scheduled ? new Date(post.scheduled).toLocaleString() : 'Next available slot'}
                       </p>
                       <div className="flex items-center space-x-2 mt-2">
                         <span className="bg-green-500/20 text-green-300 px-2 py-1 rounded text-xs">
                           {post.source}
                         </span>
                         <Twitter className="w-4 h-4 text-blue-400" />
-                        <span className="text-blue-300 text-xs">Ready to post</span>
+                        <span className="text-blue-300 text-xs">
+                          {post.posted ? `Posted (ID: ${post.tweetId})` : 'Ready to post'}
+                        </span>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <div className="px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-sm">
-                        Approved
+                      <div className={`px-3 py-1 rounded-full text-sm ${
+                        post.posted 
+                          ? 'bg-green-500/20 text-green-300' 
+                          : 'bg-blue-500/20 text-blue-300'
+                      }`}>
+                        {post.posted ? 'Posted' : 'Scheduled'}
                       </div>
                       <Send className="w-5 h-5 text-green-400" />
                     </div>
@@ -375,4 +422,4 @@ export default function Dashboard() {
       </div>
     </div>
   );
-} 
+}
