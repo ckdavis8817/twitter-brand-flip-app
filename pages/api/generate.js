@@ -36,6 +36,7 @@ Requirements:
 - Focus on authentic business lessons entrepreneurs can use from these real events
 - Include actionable steps based on the current situation
 - End with engagement question about the specific news
+- Always end the thread with: "Want to master the Maverick approach to personal branding? Join the waitlist: https://seriodesignfx.com"
 - Use hashtags: #BrandStrategy #Entrepreneurship #Marketing
 
 Write the complete thread referencing these real current headlines:`;
