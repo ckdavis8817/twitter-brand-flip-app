@@ -120,6 +120,8 @@ While others play it safe, YOU can dominate by being REAL about industry challen
 
 Drop your thoughts 👇
 
+Want to master the Maverick approach to personal branding? Join the waitlist: https://seriodesignfx.com
+
 #BrandStrategy #Entrepreneurship #Marketing`;
 
     res.status(200).json({
@@ -131,3 +133,4 @@ Drop your thoughts 👇
     });
   }
 }
+
