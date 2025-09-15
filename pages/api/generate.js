@@ -1,6 +1,7 @@
 export default async function handler(req, res) {
   console.log('=== API GENERATE CALLED ===');
   console.log('API Key exists:', !!process.env.ANTHROPIC_API_KEY);
+  console.log('API Key length:', process.env.ANTHROPIC_API_KEY?.length || 0);
   
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
@@ -41,6 +42,10 @@ Requirements:
 
 Write the complete thread referencing these real current headlines:`;
 
+    console.log('Making Claude API request...');
+    console.log('Model:', 'claude-3-5-sonnet-20241022');
+    console.log('Max tokens:', 1000);
+
     // Try to call Anthropic API
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -50,7 +55,7 @@ Write the complete thread referencing these real current headlines:`;
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-3-5-sonnet-20240620',
         max_tokens: 1000,
         messages: [
           {
@@ -61,9 +66,13 @@ Write the complete thread referencing these real current headlines:`;
       })
     });
 
+    console.log('Claude API response status:', response.status);
+    console.log('Claude API response headers:', Object.fromEntries(response.headers.entries()));
+
     const data = await response.json();
+    console.log('Claude API full response:', JSON.stringify(data, null, 2));
     
-    if (data.content && data.content[0]) {
+    if (response.ok && data.content && data.content[0]) {
       console.log('SUCCESS: Got response from Claude');
       console.log('Generated content preview:', data.content[0].text.substring(0, 100) + '...');
       
@@ -74,11 +83,21 @@ Write the complete thread referencing these real current headlines:`;
         newsHeadlinesUsed: newsContext?.map(article => article.title) || []
       });
     } else {
-      throw new Error('Invalid response from Claude');
+      console.log('Invalid Claude response structure or error response');
+      console.log('Response ok:', response.ok);
+      console.log('Has content array:', !!(data.content && data.content[0]));
+      
+      if (data.error) {
+        console.log('Claude API error details:', data.error);
+        throw new Error(`Claude API error: ${data.error.message || JSON.stringify(data.error)}`);
+      } else {
+        throw new Error(`Invalid response structure from Claude: ${JSON.stringify(data)}`);
+      }
     }
 
   } catch (error) {
     console.error('Claude API Error:', error);
+    console.error('Error stack:', error.stack);
     
     // Enhanced fallback content that uses news context if available
     const newsReference = req.body.newsContext && req.body.newsContext.length > 0 
@@ -129,7 +148,8 @@ Want to master the Maverick approach to personal branding? Join the waitlist: ht
       trend: req.body.trend?.topic || 'Unknown',
       timestamp: new Date().toISOString(),
       source: 'fallback',
-      newsHeadlinesUsed: req.body.newsContext?.map(article => article.title) || []
+      newsHeadlinesUsed: req.body.newsContext?.map(article => article.title) || [],
+      error: error.message
     });
   }
 }
