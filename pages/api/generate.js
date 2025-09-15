@@ -43,7 +43,7 @@ Requirements:
 Write the complete thread referencing these real current headlines:`;
 
     console.log('Making Claude API request...');
-    console.log('Model:', 'claude-3-5-sonnet-20241022');
+    console.log('Model:', 'claude-3-5-sonnet-20240620');
     console.log('Max tokens:', 1000);
 
     // Try to call Anthropic API
@@ -153,4 +153,5 @@ Want to master the Maverick approach to personal branding? Join the waitlist: ht
     });
   }
 }
+
 
