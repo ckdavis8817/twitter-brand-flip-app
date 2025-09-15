@@ -55,7 +55,7 @@ Write the complete thread referencing these real current headlines:`;
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20240620',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 1000,
         messages: [
           {
@@ -153,4 +153,3 @@ Want to master the Maverick approach to personal branding? Join the waitlist: ht
     });
   }
 }
-
